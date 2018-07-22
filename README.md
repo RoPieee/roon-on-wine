@@ -1,5 +1,4 @@
-# roon-on-wine
-# Running Roon with Wine on Linux
+# Running Roon on Linux with Wine
 
 This script makes it possible to run Roon on Wine.
 It creates a separate Wine instance in a folder; this is required for Roon.
