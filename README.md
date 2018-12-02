@@ -9,7 +9,7 @@ Right now the script is very rudimentary: more stuff coming soon. Keep in mind t
 * winecfg
 * wget
 
-To install Roon just clone or download this reposity and run <code>./installer.sh</code>
+To install Roon just clone or download this reposity and run <code>./install.sh</code>
 
 Be patient, installing the necessary componens for Wine can take a time. Don't be scared of the messages that flood the console. Take a coffee and wait...
 
