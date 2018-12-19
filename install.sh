@@ -25,6 +25,7 @@ _check_for_executable()
 # check necessary stuff
 _check_for_executable wine
 _check_for_executable winecfg
+_check_for_executable winetricks
 _check_for_executable wget
 
 # configure Wine
