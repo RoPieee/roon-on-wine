@@ -17,3 +17,12 @@ Be patient, installing the necessary componens for Wine can take a time. Don't b
 The installation is basically unattended. When the Roon installer starts you need to click 'Continue'.
 
 When finished you can start Roon with <code>./start_my_roon_instance.sh</code>
+
+# Supported distro's
+This scripts has been reported to work on:
+
+* ArchLinux
+* KDE Neon
+* openSUSE
+
+IF you're distro is missing please leave a note!
