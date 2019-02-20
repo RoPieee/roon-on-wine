@@ -40,8 +40,8 @@ sleep 5
 sed -i 's/"ProductName"=.*/"ProductName"="Microsoft Windows 7"/' $HOME/$WIN_ROON_DIR/system.reg
 sed -i 's/"ProductType"=.*/"ProductType"="WinNT"/' $HOME/$WIN_ROON_DIR/system.reg
 
-# install .Net 4.5
-env WINEPREFIX=$PREFIX winetricks -q dotnet45
+# install .Net 4.7
+env WINEPREFIX=$PREFIX winetricks -q dotnet472
 
 sleep 2
 
