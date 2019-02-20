@@ -1,7 +1,7 @@
 #!/bin/bash
 
 WIN_ROON_DIR=my_roon_instance
-ROON_DOWNLOAD=http://download.roonlabs.com/builds/RoonInstaller.exe
+ROON_DOWNLOAD=http://download.roonlabs.com/builds/RoonInstaller64.exe
 
 PREFIX="$HOME/$WIN_ROON_DIR"
 
@@ -30,7 +30,7 @@ _check_for_executable wget
 
 # configure Wine
 rm -rf $HOME/$WIN_ROON_DIR
-env WINEPREFIX=$PREFIX WINEARCH=win32 wine wineboot
+env WINEPREFIX=$PREFIX WINEARCH=win64 wine wineboot
 #env WINEPREFIX=$HOME/$WIN_ROON_DIR winecfg
 
 # this is required to make sure the system.reg is settled
