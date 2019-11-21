@@ -1,7 +1,7 @@
 #!/bin/bash
 
 WIN_ROON_DIR=my_roon_instance
-ROON_DOWNLOAD=http://download.roonlabs.com/builds/RoonInstaller.exe
+ROON_DOWNLOAD=http://download.roonlabs.com/builds/RoonInstaller64.exe
 
 PREFIX="$HOME/$WIN_ROON_DIR"
 
@@ -30,7 +30,7 @@ _check_for_executable wget
 
 # configure Wine
 rm -rf $HOME/$WIN_ROON_DIR
-env WINEPREFIX=$PREFIX WINEARCH=win32 wine wineboot
+env WINEPREFIX=$PREFIX WINEARCH=win64 wine wineboot
 #env WINEPREFIX=$HOME/$WIN_ROON_DIR winecfg
 
 # this is required to make sure the system.reg is settled
@@ -40,8 +40,8 @@ sleep 5
 sed -i 's/"ProductName"=.*/"ProductName"="Microsoft Windows 7"/' $HOME/$WIN_ROON_DIR/system.reg
 sed -i 's/"ProductType"=.*/"ProductType"="WinNT"/' $HOME/$WIN_ROON_DIR/system.reg
 
-# install .Net 4.5
-env WINEPREFIX=$PREFIX winetricks -q dotnet45
+# install .Net 4.7
+env WINEPREFIX=$PREFIX winetricks -q dotnet472
 
 sleep 2
 
