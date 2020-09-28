@@ -25,4 +25,4 @@ This scripts has been reported to work on:
 * KDE Neon
 * openSUSE
 
-IF you're distro is missing please leave a note!
+IF your distro is missing please leave a note!
