@@ -29,4 +29,4 @@ This scripts has been reported to work on:
 * openSUSE
 * Fedora
 
-IF you're distro is missing please leave a note!
+IF your distro is missing please leave a note!
