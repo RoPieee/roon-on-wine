@@ -47,9 +47,11 @@ _wine()
    echo "[${WINE_PLATFORM}|${PREFIX}] $comment ..."
    if [ $VERBOSE -eq 1 ]
    then
-      env WINEARCH=$WINE_PLATFORM WINEPREFIX=$PREFIX wine "$@"
+      #env WINEARCH=$WINE_PLATFORM WINEPREFIX=$PREFIX wine "$@"
+      env WINEARCH=$WINE_PLATFORM WINEPREFIX=$PREFIX WINEDLLOVERRIDES=winemenubuilder.exe=d wine "$@"
    else
-      env WINEARCH=$WINE_PLATFORM WINEPREFIX=$PREFIX wine "$@" >/dev/null 2>&1
+      #env WINEARCH=$WINE_PLATFORM WINEPREFIX=$PREFIX wine "$@" >/dev/null 2>&1
+      env WINEARCH=$WINE_PLATFORM WINEPREFIX=$PREFIX WINEDLLOVERRIDES=winemenubuilder.exe=d wine "$@" >/dev/null 2>&1
    fi
 
    sleep 2
@@ -87,26 +89,21 @@ _winetricks "Installing .NET 4.0"    -q --force dotnet40
 # setting some environment stuff
 _winetricks "Setting Windows version to 7" -q win7
 _winetricks "Setting DDR to OpenGL"        -q ddr=opengl
-#_winetricks "Installing WMI"               -q wmi
+_winetricks "Disabling crash dialog"       -q nocrashdialog
 
 rm -f ./NDP472-KB4054530-x86-x64-AllOS-ENU.exe
-wget 'https://download.microsoft.com/download/6/E/4/6E48E8AB-DC00-419E-9704-06DD46E5F81D/NDP472-KB4054530-x86-x64-AllOS-ENU.exe'
+# wget 'https://download.microsoft.com/download/6/E/4/6E48E8AB-DC00-419E-9704-06DD46E5F81D/NDP472-KB4054530-x86-x64-AllOS-ENU.exe'
+wget 'https://download.visualstudio.microsoft.com/download/pr/1f5af042-d0e4-4002-9c59-9ba66bcf15f6/089f837de42708daacaae7c04b7494db/ndp472-kb4054530-x86-x64-allos-enu.exe' -O ./NDP472-KB4054530-x86-x64-AllOS-ENU.exe
 _wine "Installing .NET..." ./NDP472-KB4054530-x86-x64-AllOS-ENU.exe /q
-
-#if [ "$WINE_PLATFORM" = "win32" ]
-#then
-#   _winetricks "Installing WMI" -q wmi
-#fi
 
 sleep 2
 
-# download Roon if necessary
+# download Roon
+rm -rf $ROON_DOWNLOAD
 test -f $( basename $ROON_DOWNLOAD ) || wget $ROON_DOWNLOAD
 
 # install Roon
-#env WINEARCH=$WINE_PLATFORM WINEPREFIX=$PREFIX wine $( basename $ROON_DOWNLOAD )
 _wine "Installing Roon" $( basename $ROON_DOWNLOAD  )
-
 
 # create start script
 cat << _EOF_ > ./start_my_roon_instance.sh
@@ -125,5 +122,26 @@ _EOF_
 
 chmod +x ./start_my_roon_instance.sh
 cp ./start_my_roon_instance.sh ~
+
+# create XDG stuff
+cat << _EOF2_ > ${HOME}/.local/share/applications/roon-on-wine.desktop
+[Desktop Entry]
+Name=Roon
+Exec=${HOME}/start_my_roon_instance.sh
+Terminal=false
+Type=Application
+StartupNotify=true
+Icon=0369_Roon.0
+StartupWMClass=roon.exe
+_EOF2_
+
+cp ./icons/16x16/roon-on-wine.png ${HOME}/.local/share/icons/hicolor/16x16/apps/0369_Roon.0.png
+cp ./icons/32x32/roon-on-wine.png ${HOME}/.local/share/icons/hicolor/32x32/apps/0369_Roon.0.png
+cp ./icons/48x48/roon-on-wine.png ${HOME}/.local/share/icons/hicolor/48x48/apps/0369_Roon.0.png
+cp ./icons/256x256/roon-on-wine.png ${HOME}/.local/share/icons/hicolor/256x256/apps/0369_Roon.0.png
+
+# refresh XDG stuff
+update-desktop-database ~/.local/share/applications
+gtk-update-icon-cache
 
 exit 0

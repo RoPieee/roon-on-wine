@@ -1,1 +1,3 @@
 *.exe
+start_my_roon_instance.sh
+winetricks
