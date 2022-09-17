@@ -114,7 +114,7 @@ SET_SCALEFACTOR=$SET_SCALEFACTOR
 PREFIX=$PREFIX
 if [ $SET_SCALEFACTOR -eq 1 ]
 then
-   env WINEPREFIX=$PREFIX wine $PREFIX/drive_c/users/$USER/AppData/Local/Roon/Application/Roon.exe -scalefactor=2
+   env WINEPREFIX=$PREFIX wine $PREFIX/drive_c/users/$USER/AppData/Local/Roon/Application/Roon.exe -scalefactor=1
 else
    env WINEPREFIX=$PREFIX wine $PREFIX/drive_c/users/$USER/AppData/Local/Roon/Application/Roon.exe
 fi
