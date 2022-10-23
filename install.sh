@@ -79,15 +79,15 @@ _wine "Setup Wine bottle" wineboot --init
 #_winetricks "Installing .NET 2.0"   -q dotnet20
 #_winetricks "Installing .NET 3.0"   -q dotnet30sp1
 #_winetricks "Installing .NET 3.5"   -q dotnet35
-_winetricks "Installing .NET 4.0"    -q --force dotnet40
+#_winetricks "Installing .NET 4.0"    -q --force dotnet40
 #_winetricks "Installing .NET 4.5"    -q --force dotnet45
-#_winetricks "Installing .NET 4.5.2"  -q --force dotnet452
+_winetricks "Installing .NET 4.5.2"  -q --force dotnet452
 #_winetricks "Installing .NET 4.6.2" -q dotnet462
 #_winetricks "Installing .NET 4.7.2" -q dotnet472
 #_winetricks "Installing .NET 4.8" -q dotnet48
 
 # setting some environment stuff
-_winetricks "Setting Windows version to 7" -q win7
+_winetricks "Setting Windows version to 10" -q win10
 _winetricks "Setting DDR to OpenGL"        -q ddr=opengl
 _winetricks "Disabling crash dialog"       -q nocrashdialog
 
