@@ -9,8 +9,14 @@ Right now the script is very rudimentary: more stuff is coming soon. Keep in min
 * winecfg
 * wget
 
-With respect to which version of Wine... this is a bit 'hit-and-miss'. For now it seems you need a (64-bit) Wine version below or equal to 5.11. In general this means that if you choose to install what's known as 'wine stable' you're on the safe side.
+## Wine version
 
+With respect to which version of Wine... this is a bit 'hit-and-miss'. 
+
+### Wine versions tested
+Ubuntu 20.04 (Focal Fossa) / Linux Mint 20x requires at least 'winehq-stable' (wine version 7.0+) or 'winehq-staging' (wine version 7.22+)
+
+# Install 
 To install Roon just clone or download this repository and run <code>./install.sh</code>
 
 Be patient, as installing the necessary components for Wine can take some time. Don't be scared of the messages that flood the console: drink a coffee and wait...
@@ -18,6 +24,13 @@ Be patient, as installing the necessary components for Wine can take some time. 
 The installation is basically unattended. When the Roon installer starts you will need to click 'Install'.
 
 When finished you can start Roon with <code>./start_my_roon_instance.sh</code>
+
+## "Resolution too small" error
+If you see a "Resolution too small" error when launching Roon, you will need to need to edit the <code>install.sh> script and reinstall.
+To do that:
+* On line 9, change the variable <code>SET_SCALEFACTOR=0</code> to <code>SET_SCALEFACTOR=1</code>.
+* Save the script and re-run it with <code>./install.sh</code>
+
 
 # Supported distro's
 This scripts has been reported to work on:
