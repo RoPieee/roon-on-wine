@@ -26,7 +26,7 @@ The installation is basically unattended. When the Roon installer starts you wil
 When finished you can start Roon with <code>./start_my_roon_instance.sh</code>
 
 ## "Resolution too small" error
-If you see a "Resolution too small" error when launching Roon, you will need to need to edit the <code>install.sh> script and reinstall.
+If you see a "Resolution too small" error when launching Roon, you will need to need to edit the <code>install.sh</code> script and reinstall.
 To do that:
 * On line 9, change the variable <code>SET_SCALEFACTOR=0</code> to <code>SET_SCALEFACTOR=1</code>.
 * Save the script and re-run it with <code>./install.sh</code>
