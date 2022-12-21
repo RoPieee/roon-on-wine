@@ -6,7 +6,7 @@ ROON_DOWNLOAD=http://download.roonlabs.com/builds/RoonInstaller64.exe
 WINETRICKS_DOWNLOAD=https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks
 WINE_PLATFORM="win64"
 test "$WINE_PLATFORM" = "win32" && ROON_DOWNLOAD=http://download.roonlabs.com/builds/RoonInstaller.exe
-SET_SCALEFACTOR=0
+SET_SCALEFACTOR=0 # 0 is do not use scalefactor in start script, 1 is to use a scale factor
 VERBOSE=1
 
 PREFIX="$HOME/$WIN_ROON_DIR"
@@ -23,6 +23,13 @@ _check_for_executable()
       exit 1
 
    fi
+}
+
+_winepath()
+{
+   env WINEARCH=$WINE_PLATFORM WINEPREFIX=$PREFIX winepath "$@"
+
+   sleep 2
 }
 
 _winetricks()
@@ -44,13 +51,18 @@ _wine()
 {
    comment="$1"
    shift
-   echo "[${WINE_PLATFORM}|${PREFIX}] $comment ..."
+
+   # Require this clause for determing LocalAppData path properly. 
+   # The comment would be included in the path; otherwise
+   if [ ${#comment} -gt 0]
+   then
+      echo "[${WINE_PLATFORM}|${PREFIX}] $comment ..."
+   fi
+
    if [ $VERBOSE -eq 1 ]
    then
-      #env WINEARCH=$WINE_PLATFORM WINEPREFIX=$PREFIX wine "$@"
       env WINEARCH=$WINE_PLATFORM WINEPREFIX=$PREFIX WINEDLLOVERRIDES=winemenubuilder.exe=d wine "$@"
    else
-      #env WINEARCH=$WINE_PLATFORM WINEPREFIX=$PREFIX wine "$@" >/dev/null 2>&1
       env WINEARCH=$WINE_PLATFORM WINEPREFIX=$PREFIX WINEDLLOVERRIDES=winemenubuilder.exe=d wine "$@" >/dev/null 2>&1
    fi
 
@@ -105,6 +117,17 @@ test -f $( basename $ROON_DOWNLOAD ) || wget $ROON_DOWNLOAD
 # install Roon
 _wine "Installing Roon" $( basename $ROON_DOWNLOAD  )
 
+# Preconditions for start script. 
+# Need a properly formatted path to the user's Roon.exe in their wine configuration
+# Get the Windows OS formatted path to the user's Local AppData folder
+WINE_LOCALAPPDATA=$( _wine '' cmd.exe /c echo %LocalAppData% )
+# Convert Windows OS formatted path to Linux formatted path from the user's wine configuration
+UNIX_LOCALAPPDATA="$( _winepath -u $WINE_LOCALAPPDATA )"
+# Windows line endings carry through winepath conversion. Remove it to get an error free path.
+UNIX_LOCALAPPDATA=${UNIX_LOCALAPPDATA%$'\r'} # remove ^M
+ROONEXE="/Roon/Application/Roon.exe"
+
+# Preconditions for start script met.
 # create start script
 cat << _EOF_ > ./start_my_roon_instance.sh
 #!/bin/bash
@@ -114,9 +137,9 @@ SET_SCALEFACTOR=$SET_SCALEFACTOR
 PREFIX=$PREFIX
 if [ $SET_SCALEFACTOR -eq 1 ]
 then
-   env WINEPREFIX=$PREFIX wine $PREFIX/drive_c/users/$USER/Local\ Settings/Application\ Data/Roon/Application/Roon.exe -scalefactor=2
+   env WINEPREFIX=$PREFIX wine ${UNIX_LOCALAPPDATA}${ROONEXE} -scalefactor=2
 else
-   env WINEPREFIX=$PREFIX wine $PREFIX/drive_c/users/$USER/Local\ Settings/Application\ Data/Roon/Application/Roon.exe
+   env WINEPREFIX=$PREFIX wine ${UNIX_LOCALAPPDATA}${ROONEXE}
 fi
 _EOF_
 
