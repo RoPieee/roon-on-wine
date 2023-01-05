@@ -1,12 +1,12 @@
 #!/bin/bash
 
 #set -x
-WIN_ROON_DIR=my_roon_instance
+WIN_ROON_DIR=.wine-roon
 ROON_DOWNLOAD=http://download.roonlabs.com/builds/RoonInstaller64.exe
 WINETRICKS_DOWNLOAD=https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks
 WINE_PLATFORM="win64"
 test "$WINE_PLATFORM" = "win32" && ROON_DOWNLOAD=http://download.roonlabs.com/builds/RoonInstaller.exe
-SET_SCALEFACTOR=1
+SET_SCALEFACTOR=0
 VERBOSE=1
 
 PREFIX="$HOME/$WIN_ROON_DIR"
@@ -79,15 +79,15 @@ _wine "Setup Wine bottle" wineboot --init
 #_winetricks "Installing .NET 2.0"   -q dotnet20
 #_winetricks "Installing .NET 3.0"   -q dotnet30sp1
 #_winetricks "Installing .NET 3.5"   -q dotnet35
-_winetricks "Installing .NET 4.0"    -q --force dotnet40
+#_winetricks "Installing .NET 4.0"    -q --force dotnet40
 #_winetricks "Installing .NET 4.5"    -q --force dotnet45
-#_winetricks "Installing .NET 4.5.2"  -q --force dotnet452
+_winetricks "Installing .NET 4.5.2"  -q --force dotnet452
 #_winetricks "Installing .NET 4.6.2" -q dotnet462
 #_winetricks "Installing .NET 4.7.2" -q dotnet472
 #_winetricks "Installing .NET 4.8" -q dotnet48
 
 # setting some environment stuff
-_winetricks "Setting Windows version to 7" -q win7
+_winetricks "Setting Windows version to 10" -q win10
 _winetricks "Setting DDR to OpenGL"        -q ddr=opengl
 _winetricks "Disabling crash dialog"       -q nocrashdialog
 
@@ -112,22 +112,23 @@ cat << _EOF_ > ./start_my_roon_instance.sh
 SET_SCALEFACTOR=$SET_SCALEFACTOR
 
 PREFIX=$PREFIX
-if [ $SET_SCALEFACTOR -eq 1 ]
+if [ \$SET_SCALEFACTOR -eq 1 ]
 then
-   env WINEPREFIX=$PREFIX wine $PREFIX/drive_c/users/$USER/AppData/Local/Roon/Application/Roon.exe -scalefactor=2
+   env WINEPREFIX=\$PREFIX wine \$PREFIX/drive_c/users/$USER/AppData/Local/Roon/Application/Roon.exe -scalefactor=2
 else
-   env WINEPREFIX=$PREFIX wine $PREFIX/drive_c/users/$USER/AppData/Local/Roon/Application/Roon.exe
+   env WINEPREFIX=\$PREFIX wine \$PREFIX/drive_c/users/$USER/AppData/Local/Roon/Application/Roon.exe
 fi
 _EOF_
 
 chmod +x ./start_my_roon_instance.sh
-cp ./start_my_roon_instance.sh ~
+mkdir -p ~/bin
+cp ./start_my_roon_instance.sh ~/bin
 
 # create XDG stuff
 cat << _EOF2_ > ${HOME}/.local/share/applications/roon-on-wine.desktop
 [Desktop Entry]
 Name=Roon
-Exec=${HOME}/start_my_roon_instance.sh
+Exec=${HOME}/bin/start_my_roon_instance.sh
 Terminal=false
 Type=Application
 StartupNotify=true
