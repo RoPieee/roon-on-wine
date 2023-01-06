@@ -35,6 +35,7 @@ This scripts has been reported to work on:
 * openSUSE
 * Fedora
 * Ubuntu
+* Linux Mint
 
 <b> Ubuntu 20.04 (Focal Fossa) / Linux Mint 20x requires at least 'winehq-stable' (wine version 7.0+) or 'winehq-staging' (wine version 7.22+) </b>
 
