@@ -6,7 +6,6 @@ ROON_DOWNLOAD=http://download.roonlabs.com/builds/RoonInstaller64.exe
 WINETRICKS_DOWNLOAD=https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks
 WINE_PLATFORM="win64"
 test "$WINE_PLATFORM" = "win32" && ROON_DOWNLOAD=http://download.roonlabs.com/builds/RoonInstaller.exe
-SET_SCALEFACTOR=0 # 0 is do not use scalefactor in start script, 1 is to use a scale factor
 VERBOSE=1
 
 PREFIX="$HOME/$WIN_ROON_DIR"
@@ -54,7 +53,7 @@ _wine()
 
    # Require this clause for determing LocalAppData path properly. 
    # The comment would be included in the path; otherwise
-   if [ ${#comment} -gt 0]
+   if [ ${#comment} -gt 0 ]
    then
       echo "[${WINE_PLATFORM}|${PREFIX}] $comment ..."
    fi
@@ -96,7 +95,7 @@ _wine "Setup Wine bottle" wineboot --init
 _winetricks "Installing .NET 4.5.2"  -q --force dotnet452
 #_winetricks "Installing .NET 4.6.2" -q dotnet462
 #_winetricks "Installing .NET 4.7.2" -q dotnet472
-_winetricks "Installing .NET 4.8" -q dotnet48
+#_winetricks "Installing .NET 4.8" -q dotnet48
 
 # setting some environment stuff
 _winetricks "Setting Windows version to 10" -q win10
@@ -104,9 +103,14 @@ _winetricks "Setting DDR to OpenGL"        -q ddr=opengl
 _winetricks "Disabling crash dialog"       -q nocrashdialog
 
 # Download and install .NET 4.8 using offline installer
-rm -f ./NDP48-x86-x64-AllOS-ENU.exe
-wget 'https://download.visualstudio.microsoft.com/download/pr/2d6bb6b2-226a-4baa-bdec-798822606ff1/8494001c276a4b96804cde7829c04d7f/ndp48-x86-x64-allos-enu.exe' -O ./NDP48-x86-x64-ALLOS-ENU.exe
-_wine "Installing .NET..." ./NDP48-x86-x64-ALLOS-ENU.exe /q
+#rm -f ./NDP48-x86-x64-AllOS-ENU.exe
+#wget 'https://download.visualstudio.microsoft.com/download/pr/2d6bb6b2-226a-4baa-bdec-798822606ff1/8494001c276a4b96804cde7829c04d7f/ndp48-x86-x64-allos-enu.exe' -O ./NDP48-x86-x64-ALLOS-ENU.exe
+#_wine "Installing .NET..." ./NDP48-x86-x64-ALLOS-ENU.exe /q
+
+rm -f ./NDP472-KB4054530-x86-x64-AllOS-ENU.exe
+# wget 'https://download.microsoft.com/download/6/E/4/6E48E8AB-DC00-419E-9704-06DD46E5F81D/NDP472-KB4054530-x86-x64-AllOS-ENU.exe'
+wget 'https://download.visualstudio.microsoft.com/download/pr/1f5af042-d0e4-4002-9c59-9ba66bcf15f6/089f837de42708daacaae7c04b7494db/ndp472-kb4054530-x86-x64-allos-enu.exe' -O ./NDP472-KB4054530-x86-x64-AllOS-ENU.exe
+_wine "Installing .NET..." ./NDP472-KB4054530-x86-x64-AllOS-ENU.exe /q
 
 sleep 2
 
@@ -132,15 +136,15 @@ ROONEXE="/Roon/Application/Roon.exe"
 cat << _EOF_ > ./start_my_roon_instance.sh
 #!/bin/bash
 
-SET_SCALEFACTOR=$SET_SCALEFACTOR
+# This parameter influences the scale at which
+# the Roon UI is rendered.
+#
+# 1.0 is default, but on an UHD screen this should be 1.5 or 2.0
+#
+SCALEFACTOR=1.0
 
 PREFIX=$PREFIX
-if [ $SET_SCALEFACTOR -eq 1 ]
-then
-   env WINEPREFIX=$PREFIX wine ${UNIX_LOCALAPPDATA}${ROONEXE} -scalefactor=2
-else
-   env WINEPREFIX=$PREFIX wine ${UNIX_LOCALAPPDATA}${ROONEXE}
-fi
+env WINEPREFIX=$PREFIX wine ${UNIX_LOCALAPPDATA}${ROONEXE} -scalefactor=\$SCALEFACTOR
 _EOF_
 
 chmod +x ./start_my_roon_instance.sh
