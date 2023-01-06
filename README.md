@@ -13,9 +13,6 @@ Right now the script is very rudimentary: more stuff is coming soon. Keep in min
 
 With respect to which version of Wine... this is a bit 'hit-and-miss'. 
 
-### Wine versions tested
-Ubuntu 20.04 (Focal Fossa) / Linux Mint 20x requires at least 'winehq-stable' (wine version 7.0+) or 'winehq-staging' (wine version 7.22+)
-
 # Install 
 To install Roon just clone or download this repository and run <code>./install.sh</code>
 
@@ -25,12 +22,10 @@ The installation is basically unattended. When the Roon installer starts you wil
 
 When finished you can start Roon with <code>./start_my_roon_instance.sh</code>
 
-## "Resolution too small" error
-If you see a "Resolution too small" error when launching Roon, you will need to need to edit the <code>install.sh</code> script and reinstall.
-To do that:
-* On line 9, change the variable <code>SET_SCALEFACTOR=0</code> to <code>SET_SCALEFACTOR=1</code>.
-* Save the script and re-run it with <code>./install.sh</code>
-
+## UI scaling issues
+Wine is not capable (yet) to automatically scale the UI accoring screen resolution.
+You can however manually adjust the scaling factor by editting the <code>start_my_roon_instance.sh</code> script, change the <code>SCALEFACTOR</code> variable and restart.
+* Sensible values are betweein 1.0 and 2.0
 
 # Supported distro's
 This scripts has been reported to work on:
@@ -39,5 +34,8 @@ This scripts has been reported to work on:
 * KDE Neon
 * openSUSE
 * Fedora
+* Ubuntu
 
-IF your distro is missing please leave a note!
+<b> Ubuntu 20.04 (Focal Fossa) / Linux Mint 20x requires at least 'winehq-stable' (wine version 7.0+) or 'winehq-staging' (wine version 7.22+) </b>
+
+If your distro is missing please leave a note!
