@@ -6,7 +6,7 @@ ROON_DOWNLOAD=http://download.roonlabs.com/builds/RoonInstaller64.exe
 WINETRICKS_DOWNLOAD=https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks
 WINE_PLATFORM="win64"
 test "$WINE_PLATFORM" = "win32" && ROON_DOWNLOAD=http://download.roonlabs.com/builds/RoonInstaller.exe
-VERBOSE=1
+VERBOSE=0
 
 PREFIX="$HOME/$WIN_ROON_DIR"
 
@@ -62,7 +62,7 @@ _wine()
    then
       env WINEARCH=$WINE_PLATFORM WINEPREFIX=$PREFIX WINEDLLOVERRIDES=winemenubuilder.exe=d wine "$@"
    else
-      env WINEARCH=$WINE_PLATFORM WINEPREFIX=$PREFIX WINEDLLOVERRIDES=winemenubuilder.exe=d wine "$@" >/dev/null 2>&1
+      env WINEARCH=$WINE_PLATFORM WINEPREFIX=$PREFIX WINEDLLOVERRIDES=winemenubuilder.exe=d wine "$@" 2>/dev/null
    fi
 
    sleep 2
@@ -110,7 +110,7 @@ _winetricks "Disabling crash dialog"       -q nocrashdialog
 rm -f ./NDP472-KB4054530-x86-x64-AllOS-ENU.exe
 # wget 'https://download.microsoft.com/download/6/E/4/6E48E8AB-DC00-419E-9704-06DD46E5F81D/NDP472-KB4054530-x86-x64-AllOS-ENU.exe'
 wget 'https://download.visualstudio.microsoft.com/download/pr/1f5af042-d0e4-4002-9c59-9ba66bcf15f6/089f837de42708daacaae7c04b7494db/ndp472-kb4054530-x86-x64-allos-enu.exe' -O ./NDP472-KB4054530-x86-x64-AllOS-ENU.exe
-_wine "Installing .NET..." ./NDP472-KB4054530-x86-x64-AllOS-ENU.exe /q
+_wine "Installing .NET" ./NDP472-KB4054530-x86-x64-AllOS-ENU.exe /q
 
 sleep 2
 
@@ -124,7 +124,7 @@ _wine "Installing Roon" $( basename $ROON_DOWNLOAD  )
 # Preconditions for start script. 
 # Need a properly formatted path to the user's Roon.exe in their wine configuration
 # Get the Windows OS formatted path to the user's Local AppData folder
-WINE_LOCALAPPDATA=$( _wine '' cmd.exe /c echo %LocalAppData% )
+WINE_LOCALAPPDATA="$( _wine '' cmd.exe /c echo %LocalAppData% )"
 # Convert Windows OS formatted path to Linux formatted path from the user's wine configuration
 UNIX_LOCALAPPDATA="$( _winepath -u $WINE_LOCALAPPDATA )"
 # Windows line endings carry through winepath conversion. Remove it to get an error free path.
@@ -140,7 +140,7 @@ cat << _EOF_ > ./start_my_roon_instance.sh
 # the Roon UI is rendered.
 #
 # 1.0 is default, but on an UHD screen this should be 1.5 or 2.0
-#
+
 SCALEFACTOR=1.0
 
 PREFIX=$PREFIX
@@ -170,5 +170,9 @@ cp ./icons/256x256/roon-on-wine.png ${HOME}/.local/share/icons/hicolor/256x256/a
 # refresh XDG stuff
 update-desktop-database ~/.local/share/applications
 gtk-update-icon-cache
+
+echo
+echo "DONE!"
+echo
 
 exit 0
