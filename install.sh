@@ -99,8 +99,9 @@ _winetricks "Installing .NET 4.5.2"  -q --force dotnet452
 
 # setting some environment stuff
 _winetricks "Setting Windows version to 10" -q win10
-_winetricks "Setting DDR to OpenGL"        -q ddr=opengl
-_winetricks "Disabling crash dialog"       -q nocrashdialog
+_winetricks "Setting DDR to OpenGL"         -q ddr=opengl
+_winetricks "Setting sound to ALSA"         -q sound=alsa
+_winetricks "Disabling crash dialog"        -q nocrashdialog
 
 # Download and install .NET 4.8 using offline installer
 #rm -f ./NDP48-x86-x64-AllOS-ENU.exe
