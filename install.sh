@@ -145,7 +145,7 @@ cat << _EOF_ > ./start_my_roon_instance.sh
 SCALEFACTOR=1.0
 
 PREFIX=$PREFIX
-env WINEPREFIX=$PREFIX wine ${UNIX_LOCALAPPDATA}${ROONEXE} -scalefactor=\$SCALEFACTOR
+env WINEPREFIX=$PREFIX WINEDEBUG=fixme-all wine ${UNIX_LOCALAPPDATA}${ROONEXE} -scalefactor=\$SCALEFACTOR
 _EOF_
 
 chmod +x ./start_my_roon_instance.sh
