@@ -96,7 +96,8 @@ _wine "Setup Wine bottle" wineboot --init
 #_winetricks "Installing .NET 4.6.2" -q dotnet462
 #_winetricks "Installing .NET 4.7.2" -q dotnet472
 #_winetricks "Installing .NET 4.8" -q dotnet48
-_winetricks "Installing .NET 6.0 Runtime" -q dotnet6
+#_winetricks "Installing .NET 6.0 Runtime" -q dotnet6
+_winetricks "Installing .NET 7.0 Runtime" -q dotnet7
 
 # setting some environment stuff
 _winetricks "Setting Windows version to 10" -q win10
@@ -127,10 +128,13 @@ _wine "Installing Roon" $( basename $ROON_DOWNLOAD  )
 # Need a properly formatted path to the user's Roon.exe in their wine configuration
 # Get the Windows OS formatted path to the user's Local AppData folder
 WINE_LOCALAPPDATA="$( _wine '' cmd.exe /c echo %LocalAppData% )"
+
 # Convert Windows OS formatted path to Linux formatted path from the user's wine configuration
 UNIX_LOCALAPPDATA="$( _winepath -u $WINE_LOCALAPPDATA )"
+
 # Windows line endings carry through winepath conversion. Remove it to get an error free path.
 UNIX_LOCALAPPDATA=${UNIX_LOCALAPPDATA%$'\r'} # remove ^M
+
 ROONEXE="/Roon/Application/Roon.exe"
 
 # Preconditions for start script met.
