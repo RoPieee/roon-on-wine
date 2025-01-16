@@ -34,6 +34,7 @@ This scripts has been reported to work on:
 * KDE Neon
 * openSUSE
 * Fedora
+  * Don't use the WineHQ repo, but just the Fedora-native Wine (<code>sudo dnf install wine</code>)
 * Ubuntu
 * Linux Mint
 
