@@ -124,6 +124,46 @@ test -f $( basename $ROON_DOWNLOAD ) || wget $ROON_DOWNLOAD
 # install Roon
 _wine "Installing Roon" $( basename $ROON_DOWNLOAD  )
 
+# Install wminet_utils proxy DLL (prevents Roon 2.65+ crash from unimplemented GetErrorInfo WMI call)
+# Roon 2.65 build 1653 added WMI volume enumeration that hits Wine's unimplemented
+# wminet_utils.dll.GetErrorInfo, causing a hard abort. This proxy DLL stubs GetErrorInfo
+# as a no-op and forwards all other 64 exports to Wine's original (renamed).
+_install_wminet_proxy()
+{
+    local wine_wminet=""
+    local script_dir
+    script_dir="$(cd "$(dirname "$0")" && pwd)"
+
+    for d in /usr/lib/wine /usr/lib32/wine /usr/lib64/wine \
+             /opt/wine-stable/lib/wine /opt/wine-devel/lib/wine /opt/wine-staging/lib/wine; do
+        candidate="${d}/x86_64-windows/wminet_utils.dll"
+        if [ -f "$candidate" ]; then wine_wminet="$candidate"; break; fi
+    done
+
+    if [ -z "$wine_wminet" ]; then
+        echo "[wminet_utils proxy] WARNING: Wine wminet_utils.dll not found, skipping"
+        return 1
+    fi
+
+    local unix_appdata
+    unix_appdata="$( _wine '' cmd.exe /c echo %LocalAppData% )"
+    unix_appdata="$( _winepath -u "$unix_appdata" )"
+    unix_appdata="${unix_appdata%$'\r'}"
+
+    local roon_app_dir="${unix_appdata}/Roon/Application"
+    if [ ! -d "$roon_app_dir" ]; then
+        echo "[wminet_utils proxy] WARNING: Roon App dir not found at $roon_app_dir"
+        return 1
+    fi
+
+    echo "[wminet_utils proxy] Installing proxy DLL to $roon_app_dir/ ..."
+    cp "$wine_wminet" "$roon_app_dir/wminet_utils_wine.dll"
+    cp "$script_dir/wminet_utils.dll" "$roon_app_dir/wminet_utils.dll"
+    echo "[wminet_utils proxy] Done"
+}
+
+_install_wminet_proxy
+
 # Preconditions for start script. 
 # Need a properly formatted path to the user's Roon.exe in their wine configuration
 # Get the Windows OS formatted path to the user's Local AppData folder
@@ -150,7 +190,7 @@ cat << _EOF_ > ./start_my_roon_instance.sh
 SCALEFACTOR=1.0
 
 PREFIX=$PREFIX
-env WINEPREFIX=$PREFIX WINEDEBUG=fixme-all WINEDLLOVERRIDES="windows.media.mediacontrol=" wine ${UNIX_LOCALAPPDATA}${ROONEXE} -scalefactor=\$SCALEFACTOR
+env WINEPREFIX=$PREFIX WINEDEBUG=fixme-all WINEDLLOVERRIDES="windows.media.mediacontrol=,wminet_utils=n" wine ${UNIX_LOCALAPPDATA}${ROONEXE} -scalefactor=\$SCALEFACTOR
 _EOF_
 
 chmod +x ./start_my_roon_instance.sh
