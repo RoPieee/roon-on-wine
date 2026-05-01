@@ -124,11 +124,10 @@ test -f $( basename $ROON_DOWNLOAD ) || wget $ROON_DOWNLOAD
 # install Roon
 _wine "Installing Roon" $( basename $ROON_DOWNLOAD  )
 
-# Install wminet_utils proxy DLL (prevents Roon 2.65+ crash from unimplemented GetErrorInfo WMI call)
-# Roon 2.65 build 1653 added WMI volume enumeration that hits Wine's unimplemented
-# wminet_utils.dll.GetErrorInfo, causing a hard abort. WINEDLLOVERRIDES cannot fix
-# built-in stubs, so we replace the system DLL directly with a proxy that stubs
-# GetErrorInfo as a no-op and forwards all other 64 exports to Wine's original.
+# Install wminet_utils proxy DLL (Wine-prefix-local, no sudo required)
+# Roon 2.65+ calls GetErrorInfo via WMI — an unimplemented Wine stub that aborts.
+# We place a proxy DLL + renamed original in this prefix's system32, and set a
+# registry override so Wine loads the proxy instead of the built-in stub.
 _install_wminet_proxy()
 {
     local wine_lib=""
@@ -137,30 +136,28 @@ _install_wminet_proxy()
 
     for d in /usr/lib/wine /usr/lib32/wine /usr/lib64/wine \
              /opt/wine-stable/lib/wine /opt/wine-devel/lib/wine /opt/wine-staging/lib/wine; do
-        candidate="${d}/x86_64-windows"
-        if [ -f "${candidate}/wminet_utils.dll" ]; then wine_lib="$candidate"; break; fi
+        candidate="${d}/x86_64-windows/wminet_utils.dll"
+        if [ -f "$candidate" ]; then wine_lib="$candidate"; break; fi
     done
 
     if [ -z "$wine_lib" ]; then
-        echo "[wminet_utils proxy] WARNING: Wine x86_64-windows dir not found, skipping"
+        echo "[wminet_utils proxy] WARNING: Wine wminet_utils.dll not found, skipping"
         return 1
     fi
 
-    local target="${wine_lib}/wminet_utils.dll"
-    local backup="${wine_lib}/wminet_utils.dll.bak"
+    local sys32="$PREFIX/drive_c/windows/system32"
 
-    if [ -f "$backup" ]; then
-        echo "[wminet_utils proxy] Backup already exists at $backup, skipping"
-        return 0
-    fi
+    echo "[wminet_utils proxy] Installing prefix-local proxy DLLs to $sys32/ ..."
+    cp "$wine_lib" "$sys32/wminet_utils_wine.dll"
+    cp "$script_dir/wminet_utils.dll" "$sys32/wminet_utils.dll"
 
-    echo "[wminet_utils proxy] Backing up original $target -> $backup"
-    echo "[wminet_utils proxy] This requires sudo to modify system Wine files."
-    sudo cp "$target" "$backup" || { echo "[wminet_utils proxy] ERROR: Failed to backup"; return 1; }
-    sudo cp "$target" "${wine_lib}/wminet_utils_wine.dll" || { echo "[wminet_utils proxy] ERROR: Failed to copy forward target"; return 1; }
-    sudo cp "$script_dir/wminet_utils.dll" "$target" || { echo "[wminet_utils proxy] ERROR: Failed to install proxy"; return 1; }
-    echo "[wminet_utils proxy] Installed. Original backed up to $backup"
-    echo "[wminet_utils proxy] To restore: sudo cp $backup $target"
+    echo "[wminet_utils proxy] Setting Wine registry override (native)..."
+    env WINEARCH=$WINE_PLATFORM WINEPREFIX=$PREFIX wine reg add \
+        "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides" \
+        /v wminet_utils /t REG_SZ /d native /f >/dev/null 2>&1
+
+    echo "[wminet_utils proxy] Done — wminet_utils=native set for prefix"
+    echo "[wminet_utils proxy] Proxy DLL affects only this Wine prefix."
 }
 
 _install_wminet_proxy
