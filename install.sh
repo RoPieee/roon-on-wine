@@ -194,7 +194,7 @@ cat << _EOF_ > ./start_my_roon_instance.sh
 SCALEFACTOR=${AUTO_SCALE}
 
 PREFIX=$PREFIX
-env WINEPREFIX=$PREFIX WINEDEBUG=fixme-all WINEDLLOVERRIDES="windows.media.mediacontrol=" wine ${UNIX_LOCALAPPDATA}${ROONEXE} -scalefactor=\$SCALEFACTOR
+env WINEPREFIX=$PREFIX WINEFSYNC=1 WINEDEBUG=-all WINEDLLOVERRIDES="windows.media.mediacontrol=" DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 wine ${UNIX_LOCALAPPDATA}${ROONEXE} -scalefactor=\$SCALEFACTOR
 _EOF_
 
 chmod +x ./start_my_roon_instance.sh
