@@ -13,6 +13,7 @@ WINE_LIB_DIRS=(
     /usr/lib/wine
     /usr/lib32/wine
     /usr/lib64/wine
+    /usr/lib/x86_64-linux-gnu/wine    # Debian/Ubuntu multiarch
     /opt/wine-stable/lib/wine
     /opt/wine-devel/lib/wine
     /opt/wine-staging/lib/wine

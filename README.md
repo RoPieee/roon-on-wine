@@ -15,7 +15,7 @@ This fork fixes the crash and adds quality-of-life improvements:
 | **WMI crash fix** | Prefix-local proxy `wminet_utils.dll` stubs `GetErrorInfo` as a no-op, converting the abort into a catchable .NET exception. No sudo, no system file changes — only affects the Roon Wine prefix. |
 | **Auto-scale** | Detects display scaling from Hyprland (or falls back to 1.0) instead of hardcoding `SCALEFACTOR=1.0` |
 | **Dark theme** | Sets Roon to dark theme by default |
-| **Performance** | `WINEFSYNC=1`, shader disk cache, fsync spincount, ClearType font smoothing, DPI-aware rendering, instant menus |
+| **Performance** | `WINEFSYNC=1`, OpenGL shader disk cache, fsync spincount, suppressed Wine debug output |
 
 See [PR #49](https://github.com/RoPieee/roon-on-wine/pull/49) for the upstream contribution.
 
