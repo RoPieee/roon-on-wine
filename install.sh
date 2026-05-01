@@ -175,13 +175,25 @@ _install_wminet_proxy()
 
     sys32="$PREFIX/drive_c/windows/system32"
 
+    # Wait for any wineserver / wine child processes spawned by the Roon
+    # installer to exit before touching system32. Without this, a lingering
+    # process can load wminet_utils.dll mid-write and see a half-copied file.
+    echo "[wminet_utils proxy] Waiting for wineserver to settle..."
+    env WINEPREFIX=$PREFIX wineserver -w 2>/dev/null || true
+
     echo "[wminet_utils proxy] Installing prefix-local proxy DLLs to $sys32/ ..."
-    if ! cp "$wine_lib" "$sys32/wminet_utils_wine.dll"; then
-        echo "[wminet_utils proxy] ERROR: failed to copy $wine_lib -> $sys32/wminet_utils_wine.dll"
+    # Copy via temp + atomic rename so a concurrent loader cannot observe
+    # a partially-written DLL.
+    if ! cp "$wine_lib" "$sys32/wminet_utils_wine.dll.tmp" \
+       || ! mv "$sys32/wminet_utils_wine.dll.tmp" "$sys32/wminet_utils_wine.dll"; then
+        rm -f "$sys32/wminet_utils_wine.dll.tmp"
+        echo "[wminet_utils proxy] ERROR: failed to install $sys32/wminet_utils_wine.dll"
         return 1
     fi
-    if ! cp "$script_dir/wminet_utils.dll" "$sys32/wminet_utils.dll"; then
-        echo "[wminet_utils proxy] ERROR: failed to copy proxy DLL into $sys32/"
+    if ! cp "$script_dir/wminet_utils.dll" "$sys32/wminet_utils.dll.tmp" \
+       || ! mv "$sys32/wminet_utils.dll.tmp" "$sys32/wminet_utils.dll"; then
+        rm -f "$sys32/wminet_utils.dll.tmp"
+        echo "[wminet_utils proxy] ERROR: failed to install $sys32/wminet_utils.dll"
         return 1
     fi
 
@@ -238,8 +250,8 @@ cat << _EOF_ > ./start_my_roon_instance.sh
 
 SCALEFACTOR=${AUTO_SCALE}
 
-PREFIX=$PREFIX
-env WINEPREFIX=$PREFIX \\
+PREFIX="$PREFIX"
+env WINEPREFIX="$PREFIX" \\
     WINEFSYNC=1 \\
     WINEDEBUG=-all \\
     WINEFSYNC_SPINCOUNT=2000 \\
@@ -247,7 +259,7 @@ env WINEPREFIX=$PREFIX \\
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \\
     __GL_SHADER_DISK_CACHE=1 \\
     __GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1 \\
-    wine ${UNIX_LOCALAPPDATA}${ROONEXE} -scalefactor=\$SCALEFACTOR
+    wine "${UNIX_LOCALAPPDATA}${ROONEXE}" -scalefactor=\$SCALEFACTOR
 _EOF_
 
 chmod +x ./start_my_roon_instance.sh
