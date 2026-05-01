@@ -4,9 +4,29 @@
 WIN_ROON_DIR=my_roon_instance
 ROON_DOWNLOAD=http://download.roonlabs.com/builds/RoonInstaller64.exe
 WINETRICKS_DOWNLOAD=https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks
-WINE_PLATFORM="win64"
-test "$WINE_PLATFORM" = "win32" && ROON_DOWNLOAD=http://download.roonlabs.com/builds/RoonInstaller.exe
+WINE_PLATFORM="${WINE_PLATFORM:-win64}"
 VERBOSE=0
+
+# Single source of truth for Wine DLL search paths — used by both the discovery
+# loop and the error message in _install_wminet_proxy.
+WINE_LIB_DIRS=(
+    /usr/lib/wine
+    /usr/lib32/wine
+    /usr/lib64/wine
+    /opt/wine-stable/lib/wine
+    /opt/wine-devel/lib/wine
+    /opt/wine-staging/lib/wine
+)
+
+# This fork's wminet_utils proxy DLL is built x86_64-only. 32-bit Wine prefixes
+# are not supported — Roon 2.65+ would crash without the proxy and we have no
+# 32-bit binary to ship. If you need win32 support, build src/ for i686 and
+# adjust _install_wminet_proxy to pick i386-windows.
+if [ "$WINE_PLATFORM" = "win32" ]; then
+    echo "ERROR: win32 Wine prefixes are not supported by this fork."
+    echo "       The bundled wminet_utils.dll proxy is x86_64-only."
+    exit 1
+fi
 
 PREFIX="$HOME/$WIN_ROON_DIR"
 
@@ -131,36 +151,56 @@ _wine "Installing Roon" $( basename $ROON_DOWNLOAD  )
 _install_wminet_proxy()
 {
     local wine_lib=""
-    local script_dir
+    local script_dir d candidate sys32
     script_dir="$(cd "$(dirname "$0")" && pwd)"
 
-    for d in /usr/lib/wine /usr/lib32/wine /usr/lib64/wine \
-             /opt/wine-stable/lib/wine /opt/wine-devel/lib/wine /opt/wine-staging/lib/wine; do
+    for d in "${WINE_LIB_DIRS[@]}"; do
         candidate="${d}/x86_64-windows/wminet_utils.dll"
         if [ -f "$candidate" ]; then wine_lib="$candidate"; break; fi
     done
 
     if [ -z "$wine_lib" ]; then
-        echo "[wminet_utils proxy] WARNING: Wine wminet_utils.dll not found, skipping"
+        echo "[wminet_utils proxy] ERROR: Wine wminet_utils.dll not found in any of:"
+        printf '  %s\n' "${WINE_LIB_DIRS[@]}"
+        echo "       Roon 2.65+ will crash without the proxy. Install Wine and rerun."
         return 1
     fi
 
-    local sys32="$PREFIX/drive_c/windows/system32"
+    if [ ! -f "$script_dir/wminet_utils.dll" ]; then
+        echo "[wminet_utils proxy] ERROR: bundled proxy DLL missing at $script_dir/wminet_utils.dll"
+        echo "       Re-clone the repo or run 'make' to rebuild."
+        return 1
+    fi
+
+    sys32="$PREFIX/drive_c/windows/system32"
 
     echo "[wminet_utils proxy] Installing prefix-local proxy DLLs to $sys32/ ..."
-    cp "$wine_lib" "$sys32/wminet_utils_wine.dll"
-    cp "$script_dir/wminet_utils.dll" "$sys32/wminet_utils.dll"
+    if ! cp "$wine_lib" "$sys32/wminet_utils_wine.dll"; then
+        echo "[wminet_utils proxy] ERROR: failed to copy $wine_lib -> $sys32/wminet_utils_wine.dll"
+        return 1
+    fi
+    if ! cp "$script_dir/wminet_utils.dll" "$sys32/wminet_utils.dll"; then
+        echo "[wminet_utils proxy] ERROR: failed to copy proxy DLL into $sys32/"
+        return 1
+    fi
 
     echo "[wminet_utils proxy] Setting Wine registry override (native)..."
-    env WINEARCH=$WINE_PLATFORM WINEPREFIX=$PREFIX wine reg add \
-        "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides" \
-        /v wminet_utils /t REG_SZ /d native /f >/dev/null 2>&1
+    if ! env WINEARCH=$WINE_PLATFORM WINEPREFIX=$PREFIX wine reg add \
+            "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides" \
+            /v wminet_utils /t REG_SZ /d native /f >/dev/null 2>&1; then
+        echo "[wminet_utils proxy] ERROR: failed to set DllOverrides registry key"
+        return 1
+    fi
 
     echo "[wminet_utils proxy] Done — wminet_utils=native set for prefix"
     echo "[wminet_utils proxy] Proxy DLL affects only this Wine prefix."
 }
 
-_install_wminet_proxy
+_install_wminet_proxy || {
+    echo "ERROR: wminet_utils proxy install failed — aborting."
+    echo "       Roon 2.65+ would crash on startup without it."
+    exit 1
+}
 
 # Preconditions for start script. 
 # Need a properly formatted path to the user's Roon.exe in their wine configuration
@@ -180,7 +220,11 @@ AUTO_SCALE="1.0"
 if command -v hyprctl >/dev/null 2>&1; then
     AUTO_SCALE=$(hyprctl monitors 2>/dev/null | grep "scale:" | head -1 | awk '{printf "%.1f", $2}')
 fi
-[ -z "$AUTO_SCALE" ] || [ "$AUTO_SCALE" = "1.0" ] || [ "$AUTO_SCALE" = "0.0" ] && AUTO_SCALE="1.0"
+# awk emits empty on a missing scale: line, "0.0" on a malformed scan.
+# Either case is a fallback signal — clamp to 1.0.
+case "$AUTO_SCALE" in
+    ""|"0.0") AUTO_SCALE="1.0" ;;
+esac
 
 # Preconditions for start script met.
 # create start script
