@@ -175,17 +175,23 @@ UNIX_LOCALAPPDATA=${UNIX_LOCALAPPDATA%$'\r'} # remove ^M
 
 ROONEXE="/Roon/Application/Roon.exe"
 
+# Auto-detect display scaling factor
+AUTO_SCALE="1.0"
+if command -v hyprctl >/dev/null 2>&1; then
+    AUTO_SCALE=$(hyprctl monitors 2>/dev/null | grep "scale:" | head -1 | awk '{printf "%.1f", $2}')
+fi
+[ -z "$AUTO_SCALE" ] || [ "$AUTO_SCALE" = "1.0" ] || [ "$AUTO_SCALE" = "0.0" ] && AUTO_SCALE="1.0"
+
 # Preconditions for start script met.
 # create start script
 cat << _EOF_ > ./start_my_roon_instance.sh
 #!/usr/bin/env bash
 
-# This parameter influences the scale at which
-# the Roon UI is rendered.
-#
-# 1.0 is default, but on an UHD screen this should be 1.5 or 2.0
+# UI scale factor — auto-detected from display settings.
+# Change this value if the auto-detected scale is incorrect.
+# 1.0 is default, on UHD screens typically 1.5–2.0.
 
-SCALEFACTOR=1.0
+SCALEFACTOR=${AUTO_SCALE}
 
 PREFIX=$PREFIX
 env WINEPREFIX=$PREFIX WINEDEBUG=fixme-all WINEDLLOVERRIDES="windows.media.mediacontrol=" wine ${UNIX_LOCALAPPDATA}${ROONEXE} -scalefactor=\$SCALEFACTOR
@@ -193,6 +199,11 @@ _EOF_
 
 chmod +x ./start_my_roon_instance.sh
 cp ./start_my_roon_instance.sh ~
+
+# Set Roon to dark theme by default
+ROON_SETTINGS="${UNIX_LOCALAPPDATA}/Roon/Settings"
+mkdir -p "$ROON_SETTINGS"
+echo "Dark" > "$ROON_SETTINGS/theme"
 
 # create XDG stuff
 cat << _EOF2_ > ${HOME}/.local/share/applications/roon-on-wine.desktop
