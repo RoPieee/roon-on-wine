@@ -4,9 +4,30 @@
 WIN_ROON_DIR=my_roon_instance
 ROON_DOWNLOAD=http://download.roonlabs.com/builds/RoonInstaller64.exe
 WINETRICKS_DOWNLOAD=https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks
-WINE_PLATFORM="win64"
-test "$WINE_PLATFORM" = "win32" && ROON_DOWNLOAD=http://download.roonlabs.com/builds/RoonInstaller.exe
+WINE_PLATFORM="${WINE_PLATFORM:-win64}"
 VERBOSE=0
+
+# Single source of truth for Wine DLL search paths — used by both the discovery
+# loop and the error message in _install_wminet_proxy.
+WINE_LIB_DIRS=(
+    /usr/lib/wine
+    /usr/lib32/wine
+    /usr/lib64/wine
+    /usr/lib/x86_64-linux-gnu/wine    # Debian/Ubuntu multiarch
+    /opt/wine-stable/lib/wine
+    /opt/wine-devel/lib/wine
+    /opt/wine-staging/lib/wine
+)
+
+# This fork's wminet_utils proxy DLL is built x86_64-only. 32-bit Wine prefixes
+# are not supported — Roon 2.65+ would crash without the proxy and we have no
+# 32-bit binary to ship. If you need win32 support, build src/ for i686 and
+# adjust _install_wminet_proxy to pick i386-windows.
+if [ "$WINE_PLATFORM" = "win32" ]; then
+    echo "ERROR: win32 Wine prefixes are not supported by this fork."
+    echo "       The bundled wminet_utils.dll proxy is x86_64-only."
+    exit 1
+fi
 
 PREFIX="$HOME/$WIN_ROON_DIR"
 
@@ -124,6 +145,76 @@ test -f $( basename $ROON_DOWNLOAD ) || wget $ROON_DOWNLOAD
 # install Roon
 _wine "Installing Roon" $( basename $ROON_DOWNLOAD  )
 
+# Install wminet_utils proxy DLL (Wine-prefix-local, no sudo required)
+# Roon 2.65+ calls GetErrorInfo via WMI — an unimplemented Wine stub that aborts.
+# We place a proxy DLL + renamed original in this prefix's system32, and set a
+# registry override so Wine loads the proxy instead of the built-in stub.
+_install_wminet_proxy()
+{
+    local wine_lib=""
+    local script_dir d candidate sys32
+    script_dir="$(cd "$(dirname "$0")" && pwd)"
+
+    for d in "${WINE_LIB_DIRS[@]}"; do
+        candidate="${d}/x86_64-windows/wminet_utils.dll"
+        if [ -f "$candidate" ]; then wine_lib="$candidate"; break; fi
+    done
+
+    if [ -z "$wine_lib" ]; then
+        echo "[wminet_utils proxy] ERROR: Wine wminet_utils.dll not found in any of:"
+        printf '  %s\n' "${WINE_LIB_DIRS[@]}"
+        echo "       Roon 2.65+ will crash without the proxy. Install Wine and rerun."
+        return 1
+    fi
+
+    if [ ! -f "$script_dir/wminet_utils.dll" ]; then
+        echo "[wminet_utils proxy] ERROR: bundled proxy DLL missing at $script_dir/wminet_utils.dll"
+        echo "       Re-clone the repo or run 'make' to rebuild."
+        return 1
+    fi
+
+    sys32="$PREFIX/drive_c/windows/system32"
+
+    # Wait for any wineserver / wine child processes spawned by the Roon
+    # installer to exit before touching system32. Without this, a lingering
+    # process can load wminet_utils.dll mid-write and see a half-copied file.
+    echo "[wminet_utils proxy] Waiting for wineserver to settle..."
+    env WINEPREFIX=$PREFIX wineserver -w 2>/dev/null || true
+
+    echo "[wminet_utils proxy] Installing prefix-local proxy DLLs to $sys32/ ..."
+    # Copy via temp + atomic rename so a concurrent loader cannot observe
+    # a partially-written DLL.
+    if ! cp "$wine_lib" "$sys32/wminet_utils_wine.dll.tmp" \
+       || ! mv "$sys32/wminet_utils_wine.dll.tmp" "$sys32/wminet_utils_wine.dll"; then
+        rm -f "$sys32/wminet_utils_wine.dll.tmp"
+        echo "[wminet_utils proxy] ERROR: failed to install $sys32/wminet_utils_wine.dll"
+        return 1
+    fi
+    if ! cp "$script_dir/wminet_utils.dll" "$sys32/wminet_utils.dll.tmp" \
+       || ! mv "$sys32/wminet_utils.dll.tmp" "$sys32/wminet_utils.dll"; then
+        rm -f "$sys32/wminet_utils.dll.tmp"
+        echo "[wminet_utils proxy] ERROR: failed to install $sys32/wminet_utils.dll"
+        return 1
+    fi
+
+    echo "[wminet_utils proxy] Setting Wine registry override (native)..."
+    if ! env WINEARCH=$WINE_PLATFORM WINEPREFIX=$PREFIX wine reg add \
+            "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides" \
+            /v wminet_utils /t REG_SZ /d native /f >/dev/null 2>&1; then
+        echo "[wminet_utils proxy] ERROR: failed to set DllOverrides registry key"
+        return 1
+    fi
+
+    echo "[wminet_utils proxy] Done — wminet_utils=native set for prefix"
+    echo "[wminet_utils proxy] Proxy DLL affects only this Wine prefix."
+}
+
+_install_wminet_proxy || {
+    echo "ERROR: wminet_utils proxy install failed — aborting."
+    echo "       Roon 2.65+ would crash on startup without it."
+    exit 1
+}
+
 # Preconditions for start script. 
 # Need a properly formatted path to the user's Roon.exe in their wine configuration
 # Get the Windows OS formatted path to the user's Local AppData folder
@@ -137,24 +228,47 @@ UNIX_LOCALAPPDATA=${UNIX_LOCALAPPDATA%$'\r'} # remove ^M
 
 ROONEXE="/Roon/Application/Roon.exe"
 
+# Auto-detect display scaling factor
+AUTO_SCALE="1.0"
+if command -v hyprctl >/dev/null 2>&1; then
+    AUTO_SCALE=$(hyprctl monitors 2>/dev/null | grep "scale:" | head -1 | awk '{printf "%.1f", $2}')
+fi
+# awk emits empty on a missing scale: line, "0.0" on a malformed scan.
+# Either case is a fallback signal — clamp to 1.0.
+case "$AUTO_SCALE" in
+    ""|"0.0") AUTO_SCALE="1.0" ;;
+esac
+
 # Preconditions for start script met.
 # create start script
 cat << _EOF_ > ./start_my_roon_instance.sh
 #!/usr/bin/env bash
 
-# This parameter influences the scale at which
-# the Roon UI is rendered.
-#
-# 1.0 is default, but on an UHD screen this should be 1.5 or 2.0
+# UI scale factor — auto-detected from display settings.
+# Change this value if the auto-detected scale is incorrect.
+# 1.0 is default, on UHD screens typically 1.5–2.0.
 
-SCALEFACTOR=1.0
+SCALEFACTOR=${AUTO_SCALE}
 
-PREFIX=$PREFIX
-env WINEPREFIX=$PREFIX WINEDEBUG=fixme-all WINEDLLOVERRIDES="windows.media.mediacontrol=" wine ${UNIX_LOCALAPPDATA}${ROONEXE} -scalefactor=\$SCALEFACTOR
+PREFIX="$PREFIX"
+env WINEPREFIX="$PREFIX" \\
+    WINEFSYNC=1 \\
+    WINEDEBUG=-all \\
+    WINEFSYNC_SPINCOUNT=2000 \\
+    WINEDLLOVERRIDES="windows.media.mediacontrol=" \\
+    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \\
+    __GL_SHADER_DISK_CACHE=1 \\
+    __GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1 \\
+    wine "${UNIX_LOCALAPPDATA}${ROONEXE}" -scalefactor=\$SCALEFACTOR
 _EOF_
 
 chmod +x ./start_my_roon_instance.sh
 cp ./start_my_roon_instance.sh ~
+
+# Set Roon to dark theme by default
+ROON_SETTINGS="${UNIX_LOCALAPPDATA}/Roon/Settings"
+mkdir -p "$ROON_SETTINGS"
+echo "Dark" > "$ROON_SETTINGS/theme"
 
 # create XDG stuff
 cat << _EOF2_ > ${HOME}/.local/share/applications/roon-on-wine.desktop
