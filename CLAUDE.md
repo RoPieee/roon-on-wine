@@ -6,8 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A shell-driven installer that runs Roon (a Windows-only .NET audio player) on Linux/FreeBSD via Wine. There is no application code — the deliverable is two scripts (`install.sh`, generated `start_my_roon_instance.sh`) plus a small C-language Wine DLL proxy used to work around a Wine bug.
 
-This is a fork of upstream `RoPieee/roon-on-wine`. See [PR #49](https://github.com/RoPieee/roon-on-wine/pull/49). The fork-specific value is the WMI crash fix and a few QoL tweaks; understand the upstream baseline before changing install flow.
-
 ## Common commands
 
 ```bash
@@ -47,7 +45,7 @@ The committed binary is x86_64 only — `install.sh` will refuse to run with `WI
 
 2. **`start_my_roon_instance.sh`** is the generated artifact. It only sets env vars and execs `wine Roon.exe -scalefactor=$SCALEFACTOR`. **It is gitignored** — anything you want preserved across reinstalls must live in the `_EOF_` heredoc inside `install.sh` (see `install.sh:221-240`). Past breakage: env vars added to the shipped `start_my_roon_instance.sh` were lost on reinstall because they weren't in the template (commit `6a89bb5`).
 
-### The WMI crash fix (the reason this fork exists)
+### The WMI crash fix
 
 Roon ≥ 2.65 calls `wminet_utils.dll.GetErrorInfo` via `System.Management.WbemErrorInfo`. Wine's built-in stub aborts the process. The fix is a **prefix-local DLL proxy**, installed by `_install_wminet_proxy()` in `install.sh:140-189`:
 
@@ -87,6 +85,6 @@ If you add a new env var, add it to the **heredoc**, not the generated file.
 - **FreeBSD support is a contract**: `install.sh` shebang is `#!/usr/bin/env bash` (commit `0e195f0`) specifically for FreeBSD path compatibility. Don't change to `#!/bin/bash`.
 - **The commented-out winetricks `dotnetXX` lines in `install.sh:99-108` are documentation**, not dead code — they record which combinations have been tried and failed across distros. Keep them.
 
-## Branch state (at fork point)
+## Branch state
 
-This repo is on `fix/wminet-utils-geterrorinfo-crash`. Master tracks upstream; the fork's commits live on this branch. PRs back to upstream should target `RoPieee/roon-on-wine#master`.
+`master` is the mainline. Feature/fix work happens on topic branches (e.g. `fix/wminet-utils-geterrorinfo-crash`) merged back into `master` via PR.
